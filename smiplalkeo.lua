@@ -1,4 +1,4 @@
-script_version('3.8')
+script_version('3.9')
 script_author('plalkeo')
 
 if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
@@ -12,7 +12,6 @@ bLib['inicfg'],						inicfg = pcall(require, 'inicfg')
 bLib['encoding'],					encoding = pcall(require, 'encoding')
 bLib['Samp Events'],				sampev = pcall(require, "lib.samp.events")
 bLib['fAwesome6'],					faicons = pcall(require, 'fAwesome6')
-bLib['requests'],					requests = pcall(require, 'requests')
 bLib['ffi'],						ffi = pcall(require, 'ffi')
 if not isMonetLoader() then
 	bLib['vkeys'],						vkeys = pcall(require, 'vkeys')
@@ -31,6 +30,10 @@ if not isMonetLoader() then
 	local keys = require 'vkeys'
 else
 	local widgets = require('widgets')
+end
+
+function getFontsPath() 
+	return not isMonetLoader() and getWorkingDirectory()..'\\lib\\Trebucbd.ttf' or 'Trebucbd.ttf'
 end
 	
 local bitex = require 'bitex'
@@ -318,7 +321,11 @@ end
 print(curcolor..'[SMI-plalkeo] {FFFFFF}Проверка библиотек...')
 for lib, bool in pairs(bLib) do 
 	if not bool then
-		print('{FF0000}ERROR\n\n'..curcolor..'[SMI-plalkeo] {FFFFFF}Библиотека "' .. lib .. '" не найдена. Скрипт не может быть запущен\n'..curcolor..'[SMI-plalkeo] {FFFFFF}Скачайте библиотеки по ссылке: https://github.com/pla1keo/smiplalkeo/raw/main/smiplalkeo_libs.rar\n')
+		if not isMonetLoader() then
+			error('{FF0000}ERROR\n\n'..curcolor..'[SMI-plalkeo] {FFFFFF}Библиотека "' .. lib .. '" не найдена. Скрипт не может быть запущен\n'..curcolor..'[SMI-plalkeo] {FFFFFF}Скачайте библиотеки по ссылке: https://github.com/pla1keo/smiplalkeo/raw/main/smiplalkeo_libs.rar\n')
+		else
+			print('{FF0000}ERROR\n\n'..curcolor..'[SMI-plalkeo] {FFFFFF}Библиотека "' .. lib .. '" не найдена. Скрипт не может быть запущен\n'..curcolor..'[SMI-plalkeo] {FFFFFF}Скачайте библиотеки по ссылке: https://github.com/pla1keo/smiplalkeo/raw/main/smiplalkeo_libs.rar\n')
+		end
 		break
 	end 
 end
@@ -343,6 +350,8 @@ local pos = false
 local font = {}
 
 local gen_color = nil
+
+-- faicons = {}
 
 
 imgui.OnInitialize(function()
@@ -392,8 +401,12 @@ imgui.OnInitialize(function()
 	font_config.SizePixels = 14.0 * MONET_DPI_SCALE;
 	font_config.GlyphExtraSpacing.x = 0.1 * MONET_DPI_SCALE
 	-- основной шрифт
-	local def = imgui.GetIO().Fonts:AddFontFromFileTTF('Trebucbd.ttf', font_config.SizePixels, font_config, defGlyph)
+	imgui.GetIO().Fonts:AddFontFromFileTTF(getFontsPath(), font_config.SizePixels, font_config, defGlyph)
 	
+    -- local configForFA = imgui.ImFontConfig()
+    -- configForFA.MergeMode = true
+    -- configForFA.PixelSnapH = true
+
 	local config = imgui.ImFontConfig()
 	config.MergeMode = true
 	config.PixelSnapH = true
@@ -405,10 +418,10 @@ imgui.OnInitialize(function()
 	imgui.GetIO().Fonts:AddFontFromMemoryCompressedBase85TTF(faicons.get_font_data_base85('solid'), 14 * MONET_DPI_SCALE, config, iconRanges) -- solid - тип иконок, так же есть thin, regular, light и duotone
 	font = {B = {}}
 	for i = 15, 25 do
-		font['B'][i] = imgui.GetIO().Fonts:AddFontFromFileTTF('Trebucbd.ttf', i * MONET_DPI_SCALE, font_config, defGlyph)
+		font['B'][i] = imgui.GetIO().Fonts:AddFontFromFileTTF(getFontsPath(), i * MONET_DPI_SCALE, font_config, defGlyph)
 		-- font['B'][i] = FONTS:AddFontFromMemoryCompressedBase85TTF(base85.SF_B, i * MONET_DPI_SCALE, nil, range[0].Data)
 	end
-	imgui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true
+	-- imgui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true
 	if not isMonetLoader() then
 		local tmp = imgui.ColorConvertU32ToFloat4(mainIni.theme['moonmonet'])
 		gen_color = monet.buildColors(mainIni.theme.moonmonet, 1.0, true)
