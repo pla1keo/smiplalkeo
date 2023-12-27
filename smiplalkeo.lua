@@ -1,4 +1,4 @@
-script_version('3.9.1')
+script_version('3.9.2')
 script_author('plalkeo')
 
 if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
@@ -2791,6 +2791,8 @@ local main_menu = imgui.OnFrame(
 				if select_id[0] > -1 and select_id[0] < 1000 and sampIsPlayerConnected(select_id[0]) then
 					lua_thread.create(function ()
 						sampSendChat("/todo Поздравляю! Вы прошли собеседование!* с улыбкой на лице")
+						wait(2000)
+						invite(select_id[0])
 						select_id[0] = -1
 						sobes_i = {
 							false,
@@ -2803,8 +2805,6 @@ local main_menu = imgui.OnFrame(
 							mc = u8'Не проверено',
 							lic = u8'Не проверено'
 						}
-						wait(2000)
-						invite(select_id[0])
 					end)
 				else
 					sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Введите id игрока.", curcolor1)
