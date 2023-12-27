@@ -1,4 +1,4 @@
-script_version('3.9')
+script_version('3.9.1')
 script_author('plalkeo')
 
 if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
@@ -13,10 +13,12 @@ bLib['encoding'],					encoding = pcall(require, 'encoding')
 bLib['Samp Events'],				sampev = pcall(require, "lib.samp.events")
 bLib['fAwesome6'],					faicons = pcall(require, 'fAwesome6')
 bLib['ffi'],						ffi = pcall(require, 'ffi')
+bLib['ssl'],						ssl = pcall(require, 'ssl.https')
 if not isMonetLoader() then
 	bLib['vkeys'],						vkeys = pcall(require, 'vkeys')
 	bLib['mimgui hotkeys by chapo'],	hotkey = pcall(require, 'mimhotkey')
 	bLib['MoonMonet'],					monet = pcall(require, 'MoonMonet')
+	local keys = require 'vkeys'
 	ffi.cdef [[
 		void* __stdcall ShellExecuteA(void* hwnd, const char* op, const char* file, const char* params, const char* dir, int show_cmd);
 		uint32_t __stdcall CoInitializeEx(void*, uint32_t);
@@ -26,14 +28,19 @@ if not isMonetLoader() then
 	]]
 
 
-	local shell32 = ffi.load 'Shell32'
-	local keys = require 'vkeys'
 else
 	local widgets = require('widgets')
+	local gta = ffi.load('GTASA')
+	ffi.cdef[[
+		void _Z12AND_OpenLinkPKc(const char* link);
+	]]
+	function openLink(link)
+		gta._Z12AND_OpenLinkPKc(link)
+	end
 end
 
-function getFontsPath() 
-	return not isMonetLoader() and getWorkingDirectory()..'\\lib\\Trebucbd.ttf' or 'Trebucbd.ttf'
+function getFontsPath()
+	return isMonetLoader() and getWorkingDirectory()..'/lib/mimgui/trebucbd.ttf' or getFolderPath(0x14)..'/trebucbd.ttf'
 end
 	
 local bitex = require 'bitex'
@@ -355,6 +362,7 @@ local gen_color = nil
 
 
 imgui.OnInitialize(function()
+	if not isMonetLoader() then shell32 = ffi.load 'Shell32' end
 	-- THEME
 	
 
@@ -1211,12 +1219,12 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		st_s = false
 		if string.match(text, "Организация: {B83434}%[(%D+)%]") == "TV студия" or string.match(text, "Организация: {B83434}%[(%D+)%]") == "TV студия SF" or string.match(text, "Организация: {B83434}%[(%D+)%]") == "TV студия LV" then
 			org = string.match(text, "Организация: {B83434}%[(%D+)%]")
-			dol = string.match(text, "Должность: {B83434}(%A+)%(%d+%)")
-			dl = u8(dol)
+			dol, _ = string.match(text, "Должность: {B83434}(.-)%(%d+%)")
+			dl = u8:encode(dol)
 			if org == 'TV студия' then org_g = u8'СМИ-ЛС'; ccity = u8'Лос-Сантос'; org_tag = 'R-LS' end
 			if org == 'TV студия SF' then org_g = u8'СМИ-СФ'; ccity = u8'Сан-Фиерро'; org_tag = 'R-SF' end
 			if org == 'TV студия LV' then org_g = u8'СМИ-ЛВ'; ccity = u8'Лас-Вентурас'; org_tag = 'R-LV' end
-			rang_n = tonumber(string.match(text, "Должность: {B83434}%A+%((%d+)%)"))
+			rang_n = tonumber(string.match(text, "Должность: {B83434}.-%((%d+)%)"))
 		else
 			org = 'nil'
 			dl = 'nil'
@@ -1458,8 +1466,8 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		msga = string.match(text, "{FFFFFF}Сообщение:\t{33AA33}(.+)\n\n{FFFFFF}")
 		msga = msga:gsub('=','rv')
 		msga = string.gsub(msga, "^%s*(.-)%s*$", "%1")
-		test = tonumber(msga)
-		if test then msga = msga .. 'a' end
+		test_1 = tonumber(msga)
+		if test_1 then msga = msga .. 'a' end
 		dialog_text[1] = '{FFFFFF}Сообщение:\t{33AA33}'..msga
 		dialog_text[2] = '{FFFFFF}Объявление от {FFD700}'..author
 		dialog_text[3] = msga
@@ -1497,26 +1505,71 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 				all = '',
 				all_vip = '',
 				today = '',
-				today_vip = ''
+				today_vip = '',
+				week = '',
+				week_vip = ''
 			},
 			newspaper = {
 				all_created = '',
 				all_sell = '',
 				today_created = '',
-				today_sell = ''
+				today_sell = '',
+				week_created = '',
+				week_sell = ''
 			},
 			rang = {
 				first = '',
 				last = ''
 			}
 		}
-		jp_info['org'], jp_info['name'] = 											string.match(text, '{FFFFFF}Статистика успеваемости сотрудника %{66FF6C%}(.+){FFFFFF}: ([A-Za-z_]+)\n')
-		jp_info['ads']['all'], jp_info['ads']['all_vip'] = 							string.match(text, 'Объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n')
-		jp_info['ads']['today'], jp_info['ads']['today_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
 
-		jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'] = 		string.match(text, 'Создано газет: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет: %{FFB323%}(%d+)%{FFFFFF%}\n')
-		jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'] = 	string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
-		jp_info['rang']['first'], jp_info['rang']['last'] = 							string.match(text, 'Дата вступления в организацию:\n%{cccccc%}(.+)%{FFFFFF%}\nПоследнее повышение:\n%{cccccc%}(.+)')
+		jp_info['org'], jp_info['name'], jp_info['ads']['all'], jp_info['ads']['all_vip'], jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'],
+		jp_info['ads']['today'], jp_info['ads']['today_vip'], jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'],
+		jp_info['ads']['week'], jp_info['ads']['week_vip'], jp_info['newspaper']['week_created'], jp_info['newspaper']['week_sell'],
+		jp_info['rang']['first'], jp_info['rang']['last'] = string.match(text, [[{FFFFFF}Статистика успеваемости сотрудника {66FF6C}(.+){FFFFFF}: ([A-Za-z_]+)
+	1%) Объявлений отредактировано: {FFB323}(%d+){FFFFFF}
+	2%) VIP-объявлений отредактировано: {FFB323}(%d+){FFFFFF}
+	3%) Создано газет: {FFB323}(%d+){FFFFFF}
+	4%) Продано газет: {FFB323}(%d+){FFFFFF}
+	5%) : {FFB323}0{FFFFFF}
+	6%) : {FFB323}0{FFFFFF}
+	7%) : {FFB323}0{FFFFFF}
+
+Статистика успеваемости за неделю:
+
+	1%) Объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+	2%) VIP-объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+	3%) Создано газет: {F9FF23}(%d+){FFFFFF}
+	4%) Продано газет: {F9FF23}(%d+){FFFFFF}
+	5%) : {F9FF23}%d+{FFFFFF}
+	6%) : {F9FF23}%d+{FFFFFF}
+	7%) : {F9FF23}%d+{FFFFFF}
+
+Статистика успеваемости за сегодня:
+
+	1%) Объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+	2%) VIP-объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+	3%) Создано газет: {F9FF23}(%d+){FFFFFF}
+	4%) Продано газет: {F9FF23}(%d+){FFFFFF}
+	5%) : {F9FF23}%d+{FFFFFF}
+	6%) : {F9FF23}%d+{FFFFFF}
+	7%) : {F9FF23}%d+{FFFFFF}
+
+Дата вступления в организацию:
+{cccccc}(.+){FFFFFF}
+Последнее повышение:
+	{cccccc}(.+)]])
+		-- jp_info['org'], jp_info['name'] = 											string.match(text, '{FFFFFF}Статистика успеваемости сотрудника %{66FF6C%}(.+){FFFFFF}: ([A-Za-z_]+)\n')
+		-- jp_info['ads']['all'], jp_info['ads']['all_vip'] = 							string.match(text, 'Объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n')
+		-- jp_info['ads']['today'], jp_info['ads']['today_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
+		-- jp_info['ads']['week'], jp_info['ads']['week_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
+		
+		
+
+		-- jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'] = 		string.match(text, 'Создано газет: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет: %{FFB323%}(%d+)%{FFFFFF%}\n')
+		-- jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'] = 	string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
+		-- jp_info['newspaper']['week_created'], jp_info['newspaper']['week_sell'] = 		string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
+		-- jp_info['rang']['first'], jp_info['rang']['last'] = 							string.match(text, 'Дата вступления в организацию:\n%{cccccc%}(.+)%{FFFFFF%}\nПоследнее повышение:\n%{cccccc%}(.+)')
 		jobprogress[0] = true
 		return false
 	end
@@ -2884,19 +2937,19 @@ local main_menu = imgui.OnFrame(
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать') end
 						wait(2000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Сегодня я проведу мероприятие "Математика"..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Сегодня я проведу мероприятие "Математика"..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' ..я называю пример - Вы в СМС на студию его ответ!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' ..я называю пример - Вы в СМС на студию его ответ!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Правила просты, а приз большой..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Правила просты, а приз большой..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Призовой фонд составляет целых ' .. str(money_math) ..'$!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Призовой фонд составляет целых ' .. str(money_math) ..'$!')
 						wait(6000)
 					end)
 				else
@@ -2907,13 +2960,13 @@ local main_menu = imgui.OnFrame(
 			if imgui.Button(u8'Закончить эфир', (imgui.ImVec2(120 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				if mainIni.config.c_nick ~= nil then
 					lua_thread.create(function()
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' На этом наш эфир подходит к концу.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' На этом наш эфир подходит к концу.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
 						wait(6000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ!') end
 						wait(2000)
@@ -2929,14 +2982,14 @@ local main_menu = imgui.OnFrame(
 			imgui.SameLine()
 			if imgui.Button(u8'Назвать пример', (imgui.ImVec2(115 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function()
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Следующий пример..')
+					sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Следующий пример..')
 					wait(6020)
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' '.. u8:decode(str(primer)))
+					sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' '.. u8:decode(str(primer)))
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Сказать стоп', (imgui.ImVec2(100 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
-				sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Стоп!')
+				sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Стоп!')
 			end
 			imgui.Text("ID: ")
 			imgui.SameLine()
@@ -2944,38 +2997,45 @@ local main_menu = imgui.OnFrame(
 			imgui.InputText(u8'##Введите id', chel_ball_c, ffi.sizeof(chel_ball_c))
 			imgui.PopItemWidth()
 			if str(chel_ball_c) ~= "" then
-				u_name = sampGetPlayerNickname(str(chel_ball_c))
-				u_name = u_name:gsub("_"," ")
+				if sampIsPlayerConnected(str(chel_ball_c)) then
+					u_name = sampGetPlayerNickname(str(chel_ball_c))
+					u_name = u_name:gsub("_"," ")
+				else
+					u_name = ''
+				end
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Добавить балл', (imgui.ImVec2(110 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
-				addball(u_name)
-				if tostring(efir_counter[u_name]) == '1' then
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балл!')
-				end
-				if tostring(efir_counter[u_name]) == '2' then
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балла!')
-				end
-				if tostring(efir_counter[u_name]) == '3' then 
-					lua_thread.create(function()
-						efir_counter = {}
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' И у нас есть победитель!')
-						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
-						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
-						addWithTag("Не забудьте завершить эфир.")
-					end)
+				if u_name ~= '' then
+					addball(u_name)
+					if tostring(efir_counter[u_name]) == '1' then
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балл!')
+					end
+					if tostring(efir_counter[u_name]) == '2' then
+						sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балла!')
+					end
+					if tostring(efir_counter[u_name]) == '3' then 
+						lua_thread.create(function()
+							efir_counter = {}
+							sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' И у нас есть победитель!')
+							wait(6000)
+							sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
+							wait(6000)
+							sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
+							addWithTag("Не забудьте завершить эфир.")
+						end)
+					end
 				end
 			end
+			imgui.Text(u8'Балл получит: '..u_name)
 			if imgui.Button(u8'Победитель', (imgui.ImVec2(100 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function()
 					efir_counter = {}
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' И у нас есть победитель!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' И у нас есть победитель!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['math'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['math'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
 					addWithTag("Не забудьте завершить эфир.")
 				end)
 			end
@@ -3005,19 +3065,19 @@ local main_menu = imgui.OnFrame(
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать') end
 						wait(2000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Сегодня я проведу мероприятие "Столицы"..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Сегодня я проведу мероприятие "Столицы"..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' ..я называю страну - Вы в СМС на студию её столицу!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' ..я называю страну - Вы в СМС на студию её столицу!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Правила просты, а приз большой..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Правила просты, а приз большой..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Призовой фонд составляет целых ' .. str(money_math) ..'$!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Призовой фонд составляет целых ' .. str(money_math) ..'$!')
 						wait(6000)
 					end)
 				else
@@ -3028,13 +3088,13 @@ local main_menu = imgui.OnFrame(
 			if imgui.Button(u8'Закончить эфир', (imgui.ImVec2(120 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				if mainIni.config.c_nick ~= nil then
 					lua_thread.create(function()
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' На этом наш эфир подходит к концу.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' На этом наш эфир подходит к концу.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
 						wait(6000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ!') end
 						wait(2000)
@@ -3050,14 +3110,14 @@ local main_menu = imgui.OnFrame(
 			imgui.SameLine()
 			if imgui.Button(u8'Назвать страну', (imgui.ImVec2(115 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function()
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Следующая страна..')
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Следующая страна..')
 					wait(6020)
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' '.. u8:decode(str(primer)))
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' '.. u8:decode(str(primer)))
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Сказать стоп', (imgui.ImVec2(100 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
-				sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Стоп!')
+				sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Стоп!')
 			end
 			imgui.Text("ID: ")
 			imgui.SameLine()
@@ -3065,38 +3125,43 @@ local main_menu = imgui.OnFrame(
 			imgui.InputText(u8'##Введите id', chel_ball_c, ffi.sizeof(chel_ball_c))
 			imgui.PopItemWidth()
 			if str(chel_ball_c) ~= "" then
-				u_name = sampGetPlayerNickname(str(chel_ball_c))
-				u_name = u_name:gsub("_"," ")
+				if sampIsPlayerConnected(str(chel_ball_c)) then
+					u_name = sampGetPlayerNickname(str(chel_ball_c))
+					u_name = u_name:gsub("_"," ")
+				else
+					u_name = ''
+				end
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Добавить балл', (imgui.ImVec2(110 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				addball(u_name)
 				if tostring(efir_counter[u_name]) == '1' then
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балл!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балл!')
 				end
 				if tostring(efir_counter[u_name]) == '2' then
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балла!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балла!')
 				end
 				if tostring(efir_counter[u_name]) == '3' then 
 					lua_thread.create(function()
 						efir_counter = {}
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' И у нас есть победитель!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' И у нас есть победитель!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
 						addWithTag("Не забудьте завершить эфир.")
 					end)
 				end
 			end
+			imgui.Text(u8'Балл получит: '..u_name)
 			if imgui.Button(u8'Победитель', (imgui.ImVec2(100 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function()
 					efir_counter = {}
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' И у нас есть победитель!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' И у нас есть победитель!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['country'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['country'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
 					addWithTag("Не забудьте завершить эфир.")
 				end)
 			end
@@ -3123,45 +3188,45 @@ local main_menu = imgui.OnFrame(
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать') end
 						wait(2000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Доброе время суток, уважаемые радиослушатели!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Доброе время суток, уважаемые радиослушатели!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' С вами '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' С вами '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Вы находитесь на волне 95.5 ФМ.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Вы находитесь на волне 95.5 ФМ.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Возможно Вы давно хотели попробовать себя в роли ведущего?')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Возможно Вы давно хотели попробовать себя в роли ведущего?')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Зарабатывать от 1.000.000$ в день?')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Зарабатывать от 1.000.000$ в день?')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Стать популярным и узнаваемым человеком в штате?')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Стать популярным и узнаваемым человеком в штате?')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Именно сейчас, у вас есть такая возможность, ведь прямо сейчас...')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Именно сейчас, у вас есть такая возможность, ведь прямо сейчас...')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' ...проходит собеседование в СМИ г. ' .. u8:decode(mainIni.config.c_city))
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' ...проходит собеседование в СМИ г. ' .. u8:decode(mainIni.config.c_city))
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Наш радиоцентр лучший из всех, что есть в штате')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Наш радиоцентр лучший из всех, что есть в штате')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Собеседование проходит в холле нашего радиоцентра.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Собеседование проходит в холле нашего радиоцентра.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Чтобы пройти собеседование вам нужно иметь при себе...')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Чтобы пройти собеседование вам нужно иметь при себе...')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' ...паспорт, мед. карту, и быть законопослушным гражданином.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' ...паспорт, мед. карту, и быть законопослушным гражданином.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Так-же на оффициальном портале штата открыты заявки...')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Так-же на оффициальном портале штата открыты заявки...')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' ...на должность "Редактор".')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' ...на должность "Редактор".')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' Не упускай свой шанс заработать, и стать популярной личностью!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' Не упускай свой шанс заработать, и стать популярной личностью!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' На этом наш эфир подходит к концу.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' На этом наш эфир подходит к концу.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['sobes'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['sobes'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ.')
 						wait(6000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ.') end
 						wait(2000)
@@ -3183,31 +3248,31 @@ local main_menu = imgui.OnFrame(
 				lua_thread.create(function ()
 					sampSendChat('/todo Начнем..*включив микрофон')
 					wait(2000)
-					if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать') end
+					-- if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать') end
 					wait(2000)
-					sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+					sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' Доброе время суток, уважаемые радиослушатели!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' Доброе время суток, уважаемые радиослушатели!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' С вами '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' С вами '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' Вы находитесь на волне 95.5 ФМ.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' Вы находитесь на волне 95.5 ФМ.')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' '..u8:decode(string.match(mainIni.efir['reklama_text'], "([^&]+)")))
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' '..u8:decode(string.match(mainIni.efir['reklama_text'], "([^&]+)")))
 					for ttext in string.gmatch(mainIni.efir['reklama_text'], "&([^&]+)") do
 						wait(tonumber(6 * 1000))
-						sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' '..u8:decode(ttext))
+						sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' '..u8:decode(ttext))
 					end
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' На этом наш эфир подходит к концу.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' На этом наш эфир подходит к концу.')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'.')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['reklama'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['reklama'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ.')
 					wait(6000)
-					sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+					sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 					wait(2000)
-					if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ.') end
+					-- if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ.') end
 					wait(2000)
 					sampSendChat('/todo На этом всё..*выключив микрофон')
 				end)
@@ -3215,7 +3280,7 @@ local main_menu = imgui.OnFrame(
 			imgui.SameLine()
 			imgui.Ques("Как правильно проводить рекламу?\n1. Необходимо ввести ТОЛЬКО текст рекламы организации (без тегов, приветствия и тд.)\n2. /d, Тэги, Приветствие ставится само по себе")
 			if imgui.InputTextMultiline("	 ", rektext, ffi.sizeof(rektext), imgui.ImVec2(500 * MONET_DPI_SCALE, -1)) then
-				mainIni.efir['reklama_text'] = string.gsub(rektext[0], "\n", "&")
+				mainIni.efir['reklama_text'] = string.gsub(str(rektext), "\n", "&")
 				inicfg.save(mainIni, 'smi.ini')
 			end
 		end
@@ -3229,27 +3294,27 @@ local main_menu = imgui.OnFrame(
 					wait(2000)
 					sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать')
 					wait(2000)
-					sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » °•°•°•°•')
+					sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » °•°•°•°•')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' Вы находитесь на волне 95.5 ФМ...')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' Вы находитесь на волне 95.5 ФМ...')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' И сейчас я проведу интервью.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' И сейчас я проведу интервью.')
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Закончить эфир', (imgui.ImVec2(120 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function ()
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' На этом наше интервью подходит к концу.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' На этом наше интервью подходит к концу.')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['inter'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['inter'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
 					wait(6000)
-					sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » °•°•°•°•')
+					sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » °•°•°•°•')
 					wait(2000)
 					sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ!')
 					wait(2000)
@@ -3275,7 +3340,7 @@ local main_menu = imgui.OnFrame(
 					if str(interv['rang']) == '' then
 						sampSendChat('Сегодня у нас в гостях '.. u8:decode(str(interv['name'])))
 					else
-						sampSendChat('Сегодня у нас в гостях '.. u8:decode(str(interv['rang'])) ..' - '.. u8:decode(interv['name'][0]))
+						sampSendChat('Сегодня у нас в гостях '.. u8:decode(str(interv['rang'])) ..' - '.. u8:decode(str(interv['name'])))
 					end
 					wait(2000)
 					sampSendChat('И сейчас я задам вам несколько вопросов.')
@@ -3305,19 +3370,19 @@ local main_menu = imgui.OnFrame(
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Занимаю новостную волну 95.5 ФМ! Просьба не перебивать') end
 						wait(2000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Добрый день, уважаемые радиослушатели! У микрофона..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Сегодня я проведу мероприятие "Химия"..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Сегодня я проведу мероприятие "Химия"..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' ..я называю элемент - Вы в СМС на студию его название!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' ..я называю элемент - Вы в СМС на студию его название!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Правила просты, а приз большой..')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Правила просты, а приз большой..')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Призовой фонд составляет целых ' .. str(money_math) ..'$!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Призовой фонд составляет целых ' .. str(money_math) ..'$!')
 						wait(6000)
 					end)
 				else
@@ -3328,13 +3393,13 @@ local main_menu = imgui.OnFrame(
 			if imgui.Button(u8'Закончить эфир', (imgui.ImVec2(120 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				if mainIni.config.c_nick ~= nil then
 					lua_thread.create(function()
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' На этом наш эфир подходит к концу.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' На этом наш эфир подходит к концу.')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' С вами был '.. u8:decode(mainIni.config.c_rang) .. ' СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' - ' .. u8:decode(mainIni.config.c_nick)  ..'!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' До свидания, штат. Оставайтесь на волне 95.5 ФМ!')
 						wait(6000)
-						sampSendChat('/news •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
+						sampSendChat('/b •°•°•°•° Музыкальная заставка радиостанции « СМИ г. ' .. u8:decode(mainIni.config.c_city) ..' » •°•°•°•°•')
 						wait(2000)
 						if mainIni.efir['dep'] then sampSendChat('/d ['.. u8:decode(mainIni.config.c_cnn) ..'] - [СМИ] Освободил новостную волну 95.5 ФМ!') end
 						wait(2000)
@@ -3350,14 +3415,14 @@ local main_menu = imgui.OnFrame(
 			imgui.SameLine()
 			if imgui.Button(u8'Назвать элемент', (imgui.ImVec2(115 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function()
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Следующий элемент..')
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Следующий элемент..')
 					wait(6020)
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' '.. u8:decode(str(primer)))
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' '.. u8:decode(str(primer)))
 				end)
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Сказать стоп', (imgui.ImVec2(100 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
-				sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Стоп!')
+				sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Стоп!')
 			end
 			imgui.Text("ID: ")
 			imgui.SameLine()
@@ -3365,38 +3430,43 @@ local main_menu = imgui.OnFrame(
 			imgui.InputText(u8'##Введите id', chel_ball_c, ffi.sizeof(chel_ball_c))
 			imgui.PopItemWidth()
 			if str(chel_ball_c) ~= "" then
-				u_name = sampGetPlayerNickname(str(chel_ball_c))
-				u_name = u_name:gsub("_"," ")
+				if sampIsPlayerConnected(str(chel_ball_c)) then
+					u_name = sampGetPlayerNickname(str(chel_ball_c))
+					u_name = u_name:gsub("_"," ")
+				else
+					u_name = ''
+				end
 			end
 			imgui.SameLine()
 			if imgui.Button(u8'Добавить балл', (imgui.ImVec2(110 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				addball(u_name)
 				if tostring(efir_counter[u_name]) == '1' then
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балл!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балл!')
 				end
 				if tostring(efir_counter[u_name]) == '2' then
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балла!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Первым был '.. u8:decode(u_name) .. ' и у него '.. efir_counter[u_name] .. ' балла!')
 				end
 				if tostring(efir_counter[u_name]) == '3' then 
 					lua_thread.create(function()
 						efir_counter = {}
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' И у нас есть победитель!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' И у нас есть победитель!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
 						wait(6000)
-						sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
+						sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
 						addWithTag("Не забудьте завершить эфир.")
 					end)
 				end
 			end
+			imgui.Text(u8'Балл получит: '..u_name)
 			if imgui.Button(u8'Победитель', (imgui.ImVec2(100 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then
 				lua_thread.create(function()
 					efir_counter = {}
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' И у нас есть победитель!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' И у нас есть победитель!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Побеждает ' .. u8:decode(u_name).. ' он первый набрал 3 балла и получает приз!')
 					wait(6000)
-					sampSendChat('/news '..u8:decode(mainIni.tags['himia'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
+					sampSendChat('/b '..u8:decode(mainIni.tags['himia'])..' Просим победителя прийти в офис СМИ г.'..u8:decode(mainIni.config.c_city)..' для получения приза.')
 					addWithTag("Не забудьте завершить эфир.")
 				end)
 			end
@@ -3468,12 +3538,16 @@ local main_menu = imgui.OnFrame(
 				if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы скопировать, или ПКМ, чтобы открыть в браузере")  end
 				if imgui.IsItemClicked(0) then setClipboardText("https://vk.com/plalkeo") end
 				if imgui.IsItemClicked(1) then shell32.ShellExecuteA(nil, 'open', 'https://vk.com/im?sel=238453770', nil, nil, 1) end
+			else
+				if imgui.IsItemClicked(0) then openLink("https://vk.com/im?sel=238453770") end
 			end
 			imgui.TextColoredRGB('Группа VK: ' .. curcolor .. 'vk.com/smiplalkeo')
 			if not isMonetLoader() then
 				if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы скопировать, или ПКМ, чтобы открыть в браузере")  end
 				if imgui.IsItemClicked(0) then setClipboardText("https://vk.com/smiplalkeo") end
 				if imgui.IsItemClicked(1) then shell32.ShellExecuteA(nil, 'open', 'https://vk.com/smiplalkeo', nil, nil, 1) end
+			else
+				if imgui.IsItemClicked(0) then openLink("https://vk.com/smiplalkeo") end
 			end
 			imgui.Text(u8[[blast hk: plalkeo
 Скрипт был разработан для Arizona RP]])
@@ -3488,20 +3562,20 @@ local main_menu = imgui.OnFrame(
 				imgui.ShowCursor = false
 			end
 				if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы выгрузить скрипт")  end -- для выгрузки
-			if not isMonetLoader() then
-				imgui.SameLine()
-				if imgui.Button(u8'Проверить обновления') then
-					buttonupdate('https://raw.githubusercontent.com/pla1keo/smiplalkeo/main/smiplalkeo.json','[SMI-plalkeo]{FFFFFF}','url')
-				end
-					if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы проверить обновления скрипта")  end -- для обнов
+			imgui.SameLine()
+			if imgui.Button(u8'Проверить обновления') then
+				buttonupdate('https://raw.githubusercontent.com/pla1keo/smiplalkeo/main/smiplalkeo.json','[SMI-plalkeo]{FFFFFF}','url')
 			end
+				if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы проверить обновления скрипта")  end -- для обнов
 			imgui.Text(u8'Если у вас есть какие-то проблемы/баги - напишите разработчику скрипта')
-			if not isMonetLoader() then
-				if imgui.Button(u8'Сообщить о проблеме/баге') then
+			if imgui.Button(u8'Сообщить о проблеме/баге') then
+				if not isMonetLoader() then
 					shell32.ShellExecuteA(nil, 'open', 'https://vk.com/im?sel=238453770', nil, nil, 1)
+				else
+					openLink("https://vk.com/im?sel=238453770")
 				end
-					if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы написать разработчику")  end -- для сообщения о трабле/баге
 			end
+			if imgui.IsItemHovered() then imgui.SetTooltip(u8"Кликните ЛКМ, чтобы написать разработчику")  end -- для сообщения о трабле/баге
 			imgui.TextColoredRGB('Версия: '..thisScript().version, 3)
 			if imgui.Button(faicons('INFO') .. u8' Чейнджлог', (imgui.ImVec2(200 * MONET_DPI_SCALE, 20 * MONET_DPI_SCALE))) then smi_menu = 'changelog' end
 			imgui.EndChild()
@@ -3672,20 +3746,20 @@ local autoedit = imgui.OnFrame(
 	end
 )
 
-function sampev.onSendSpawn()
-	if spawn and isMonetLoader() then
-		spawn = false
-		_, u_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-		u_name = sampGetPlayerNickname(u_id)
-		sampSendChat('/stats')
-		if u8:decode(mainIni.config['c_nick']) == '' or u8:decode(mainIni.config['c_nick']) == ' ' then
-			saveInfo('config','c_nick',u8(trst(u_name)))
-		end
-		saveInfo('config','c_nicken',u_name)
-		sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Приветствуем вас: "..curcolor.. u_name .. '[' .. u_id .. ']', curcolor1)
-		sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Для открытия главного меню введите "..curcolor.."/smi", curcolor1)
-	end
-end
+-- function sampev.onSendSpawn()
+-- 	if spawn and isMonetLoader() then
+-- 		spawn = false
+-- 		_, u_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+-- 		u_name = sampGetPlayerNickname(u_id)
+-- 		sampSendChat('/stats')
+-- 		if u8:decode(mainIni.config['c_nick']) == '' or u8:decode(mainIni.config['c_nick']) == ' ' then
+-- 			saveInfo('config','c_nick',u8(trst(u_name)))
+-- 		end
+-- 		saveInfo('config','c_nicken',u_name)
+-- 		sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Приветствуем вас: "..curcolor.. u_name .. '[' .. u_id .. ']', curcolor1)
+-- 		sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Для открытия главного меню введите "..curcolor.."/smi", curcolor1)
+-- 	end
+-- end
 
 jobs = {
 	'Таксист',
@@ -3795,7 +3869,7 @@ function main()
 	end
 	sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Загружен. Автор: "..curcolor.."plalkeo", curcolor1)
 	sampRegisterChatCommand("smi",test)
-	if not isMonetLoader() then sampRegisterChatCommand("update", update) end
+	sampRegisterChatCommand("update", update)
 	sampRegisterChatCommand("r", function(text) 
 		if accent[5][0] and accent[1][0] then sampSendChat('/r ['..u8:decode(accent[2][0])..' акцент]: '..text) 
 		else sampSendChat('/r '..text) end 
@@ -3838,21 +3912,27 @@ function main()
 				test()
 			end
 		end
-
-		if not isMonetLoader() then
-			if sampIsLocalPlayerSpawned() and spawn then
-				spawn = false
-				_, u_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
-				u_name = sampGetPlayerNickname(u_id)
-				sampSendChat('/stats')
-				if u8:decode(mainIni.config['c_nick']) == '' or u8:decode(mainIni.config['c_nick']) == ' ' then
-					saveInfo('config','c_nick',u8(trst(u_name)))
-				end
-				saveInfo('config','c_nicken',u_name)
-				sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Приветствуем вас: "..curcolor.. u_name .. '[' .. u_id .. ']', curcolor1)
-				sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Для открытия главного меню введите "..curcolor.."/smi", curcolor1)
-				buttonupdate('https://raw.githubusercontent.com/pla1keo/smiplalkeo/main/smiplalkeo.json','[SMI-plalkeo]{FFFFFF}')
+		if sampIsLocalPlayerSpawned() and spawn then
+			spawn = false
+			_, u_id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+			u_name = sampGetPlayerNickname(u_id)
+			sampSendChat('/stats')
+			if u8:decode(mainIni.config['c_nick']) == '' or u8:decode(mainIni.config['c_nick']) == ' ' then
+				saveInfo('config','c_nick',u8(trst(u_name)))
 			end
+			saveInfo('config','c_nicken',u_name)
+			sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Приветствуем вас: "..curcolor.. u_name .. '[' .. u_id .. ']', curcolor1)
+			sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Для открытия главного меню введите "..curcolor.."/smi", curcolor1)
+			if not doesFileExist(getFontsPath()) then
+				sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Отсутствует необходимый файл для работы скрипта. Загружаю файл..", curcolor1)
+				downloadFileToPath('https://raw.githubusercontent.com/pla1keo/smiplalkeo/main/Trebucbd.ttf', getFontsPath())
+				if doesFileExist(getFontsPath()) then
+					sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Файл скачан успешно!", curcolor1)
+				else
+					sampAddChatMessage("[SMI-plalkeo] {FFFFFF}Не удалось скачать файл.", curcolor1)
+				end
+			end
+			buttonupdate('https://raw.githubusercontent.com/pla1keo/smiplalkeo/main/smiplalkeo.json','[SMI-plalkeo]{FFFFFF}')
 		end
 	end
 end
@@ -4114,53 +4194,57 @@ end
 function update()
 	prefix = '[SMI-plalkeo]{FFFFFF}'
 	color = curcolor1
-	local dlstatus = require('moonloader').download_status
-	downloadUrlToFile('https://github.com/pla1keo/smiplalkeo/raw/main/smiplalkeo.lua', thisScript().path,
-		function(id3, status1, p13, p23)
-		if status1 == dlstatus.STATUS_DOWNLOADINGDATA then
-			print(string.format('Загружено %d из %d.', p13, p23))
-		elseif status1 == dlstatus.STATUS_ENDDOWNLOADDATA then
-			print('Загрузка обновления завершена.')
-			sampAddChatMessage((prefix..' Обновление завершено!'), color)
-			goupdatestatus = true
-			lua_thread.create(function() wait(500) thisScript():reload() end)
-		end
-		if status1 == dlstatus.STATUSEX_ENDDOWNLOAD then
-			if goupdatestatus == nil then
-				sampAddChatMessage((prefix..' Обновление прошло неудачно. Запускаю устаревшую версию..'), color)
-			end
-		end
-	end)
+	local file, code = downloadFileToPath2('https://raw.githubusercontent.com/pla1keo/smiplalkeo/main/smiplalkeo.lua', thisScript().path)
+	if file then
+		print('Загрузка обновления завершена.')
+		sampAddChatMessage((prefix..' Обновление завершено!'), color)
+		lua_thread.create(function() wait(500) thisScript():reload() end)
+	else
+		sampAddChatMessage((prefix..' Обновление прошло неудачно. Запускаю устаревшую версию..'), color)
+	end
 end
 
 function buttonupdate(json_url, prefix)
-	local dlstatus = require('moonloader').download_status
-	local json = getWorkingDirectory() .. '\\smiplalkeo.json'
+	local json = getWorkingDirectory() .. '/smiplalkeo.json'
 	if doesFileExist(json) then os.remove(json) end
-	downloadUrlToFile(json_url, json,
-	function(id, status, p1, p2)
-		if status == dlstatus.STATUSEX_ENDDOWNLOAD then
-			if doesFileExist(json) then
-				local f = io.open(json, 'r')
-				if f then
-					local info = decodeJson(f:read('*a'))
-					updateversion = info.version
-					f:close()
-					os.remove(json)
-					if updateversion ~= thisScript().version then
-						local color = curcolor1
-						sampAddChatMessage((prefix..' Обнаружено обновление. v'..updateversion), color)
-						sampAddChatMessage(prefix..' Для обновления используйте команду '..curcolor..'/update', color)
-					else
-						update = false
-						sampAddChatMessage(prefix..' Обновления не найдены.', curcolor1)
-						print('v'..thisScript().version..': Обновление не требуется.')
-					end
-				end
+	downloadFileToPath2(json_url, json)
+	if doesFileExist(json) then
+		local f = io.open(json, 'r')
+		if f then
+			local info = decodeJson(f:read('*a'))
+			updateversion = info.version
+			f:close()
+			os.remove(json)
+			if updateversion ~= thisScript().version then
+				local color = curcolor1
+				sampAddChatMessage((prefix..' Обнаружено обновление. v'..updateversion), color)
+				sampAddChatMessage(prefix..' Для обновления используйте команду '..curcolor..'/update', color)
 			else
-				print('v'..thisScript().version..': Не могу проверить обновление.')
 				update = false
+				sampAddChatMessage(prefix..' Обновления не найдены.', curcolor1)
+				print('v'..thisScript().version..': Обновление не требуется.')
 			end
 		end
-	end)
+	else
+		print('v'..thisScript().version..': Не могу проверить обновление.')
+		update = false
+	end
+end
+
+function downloadFileToPath(url, file_path)
+    local file, code = ssl.request(url)
+
+    local f = io.open(file_path, 'wb')
+    f:write(file)
+    f:close()
+	return file, code
+end
+
+function downloadFileToPath2(url, file_path)
+    local file, code = ssl.request(url)
+
+    local f = io.open(file_path, 'w')
+    f:write(file)
+    f:close()
+	return file, code
 end
