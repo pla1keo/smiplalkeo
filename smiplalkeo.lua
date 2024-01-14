@@ -1,4 +1,4 @@
-script_version('3.9.3')
+script_version('3.9.4')
 script_author('plalkeo')
 
 if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
@@ -1203,18 +1203,18 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 			return false
 		end
 	end
-	if dialogId == 1214 and title:find("Банк") then
-		lmenu_info = {
-			bank = '',
-			eat = '',
-			d = '',
-		}
-		lmenu_info['bank'] = string.match(title, '{BFBBBA}{FFFFFF}Банк: {E1E948}(.+)')
-		lmenu_info['eat'] = string.match(text, '%{ff6666%}%[7%] %{FFFFFF%}Ранг доступа к еде: %{407930%}(%d+) %((.+)%)%{AFAFAF%} ранга\n')
-		lmenu_info['d'] = string.match(text, '%{ff6666%}%[13%] %{FFFFFF%}Ранг доступа к %/d: %{407930%}(%d+) %((.+)%)%{AFAFAF%} ранга\n')
-		custom_lmenu[0] = true
-		return false
-	end
+	-- if dialogId == 1214 and title:find("Банк") then
+	-- 	lmenu_info = {
+	-- 		bank = '',
+	-- 		eat = '',
+	-- 		d = '',
+	-- 	}
+	-- 	lmenu_info['bank'] = string.match(title, '{BFBBBA}{FFFFFF}Банк: {E1E948}(.+)')
+	-- 	lmenu_info['eat'] = string.match(text, '%{ff6666%}%[7%] %{FFFFFF%}Ранг доступа к еде: %{407930%}(%d+) %((.+)%)%{AFAFAF%} ранга\n')
+	-- 	lmenu_info['d'] = string.match(text, '%{ff6666%}%[13%] %{FFFFFF%}Ранг доступа к %/d: %{407930%}(%d+) %((.+)%)%{AFAFAF%} ранга\n')
+	-- 	custom_lmenu[0] = true
+	-- 	return false
+	-- end
 	if dialogId == 235 and title == "{BFBBBA}Основная статистика" and st_s then
 		st_s = false
 		if string.match(text, "Организация: {B83434}%[(%D+)%]") == "TV студия" or string.match(text, "Организация: {B83434}%[(%D+)%]") == "TV студия SF" or string.match(text, "Организация: {B83434}%[(%D+)%]") == "TV студия LV" then
@@ -1497,82 +1497,82 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 		end
 		return false
 	end
-	if title:find('Успеваемость') and dialogId == 0 then 
-		jp_info = {
-			org = '',
-			name = '',
-			ads = {
-				all = '',
-				all_vip = '',
-				today = '',
-				today_vip = '',
-				week = '',
-				week_vip = ''
-			},
-			newspaper = {
-				all_created = '',
-				all_sell = '',
-				today_created = '',
-				today_sell = '',
-				week_created = '',
-				week_sell = ''
-			},
-			rang = {
-				first = '',
-				last = ''
-			}
-		}
+-- 	if title:find('Успеваемость') and dialogId == 0 then 
+-- 		jp_info = {
+-- 			org = '',
+-- 			name = '',
+-- 			ads = {
+-- 				all = '',
+-- 				all_vip = '',
+-- 				today = '',
+-- 				today_vip = '',
+-- 				week = '',
+-- 				week_vip = ''
+-- 			},
+-- 			newspaper = {
+-- 				all_created = '',
+-- 				all_sell = '',
+-- 				today_created = '',
+-- 				today_sell = '',
+-- 				week_created = '',
+-- 				week_sell = ''
+-- 			},
+-- 			rang = {
+-- 				first = '',
+-- 				last = ''
+-- 			}
+-- 		}
 
-		jp_info['org'], jp_info['name'], jp_info['ads']['all'], jp_info['ads']['all_vip'], jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'],
-		jp_info['ads']['today'], jp_info['ads']['today_vip'], jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'],
-		jp_info['ads']['week'], jp_info['ads']['week_vip'], jp_info['newspaper']['week_created'], jp_info['newspaper']['week_sell'],
-		jp_info['rang']['first'], jp_info['rang']['last'] = string.match(text, [[{FFFFFF}Статистика успеваемости сотрудника {66FF6C}(.+){FFFFFF}: ([A-Za-z_]+)
-	1%) Объявлений отредактировано: {FFB323}(%d+){FFFFFF}
-	2%) VIP-объявлений отредактировано: {FFB323}(%d+){FFFFFF}
-	3%) Создано газет: {FFB323}(%d+){FFFFFF}
-	4%) Продано газет: {FFB323}(%d+){FFFFFF}
-	5%) : {FFB323}0{FFFFFF}
-	6%) : {FFB323}0{FFFFFF}
-	7%) : {FFB323}0{FFFFFF}
+-- 		jp_info['org'], jp_info['name'], jp_info['ads']['all'], jp_info['ads']['all_vip'], jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'],
+-- 		jp_info['ads']['today'], jp_info['ads']['today_vip'], jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'],
+-- 		jp_info['ads']['week'], jp_info['ads']['week_vip'], jp_info['newspaper']['week_created'], jp_info['newspaper']['week_sell'],
+-- 		jp_info['rang']['first'], jp_info['rang']['last'] = string.match(text, [[{FFFFFF}Статистика успеваемости сотрудника {66FF6C}(.+){FFFFFF}: ([A-Za-z_]+)
+-- 	1%) Объявлений отредактировано: {FFB323}(%d+){FFFFFF}
+-- 	2%) VIP-объявлений отредактировано: {FFB323}(%d+){FFFFFF}
+-- 	3%) Создано газет: {FFB323}(%d+){FFFFFF}
+-- 	4%) Продано газет: {FFB323}(%d+){FFFFFF}
+-- 	5%) : {FFB323}0{FFFFFF}
+-- 	6%) : {FFB323}0{FFFFFF}
+-- 	7%) : {FFB323}0{FFFFFF}
 
-Статистика успеваемости за неделю:
+-- Статистика успеваемости за неделю:
 
-	1%) Объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
-	2%) VIP-объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
-	3%) Создано газет: {F9FF23}(%d+){FFFFFF}
-	4%) Продано газет: {F9FF23}(%d+){FFFFFF}
-	5%) : {F9FF23}%d+{FFFFFF}
-	6%) : {F9FF23}%d+{FFFFFF}
-	7%) : {F9FF23}%d+{FFFFFF}
+-- 	1%) Объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+-- 	2%) VIP-объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+-- 	3%) Создано газет: {F9FF23}(%d+){FFFFFF}
+-- 	4%) Продано газет: {F9FF23}(%d+){FFFFFF}
+-- 	5%) : {F9FF23}%d+{FFFFFF}
+-- 	6%) : {F9FF23}%d+{FFFFFF}
+-- 	7%) : {F9FF23}%d+{FFFFFF}
 
-Статистика успеваемости за сегодня:
+-- Статистика успеваемости за сегодня:
 
-	1%) Объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
-	2%) VIP-объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
-	3%) Создано газет: {F9FF23}(%d+){FFFFFF}
-	4%) Продано газет: {F9FF23}(%d+){FFFFFF}
-	5%) : {F9FF23}%d+{FFFFFF}
-	6%) : {F9FF23}%d+{FFFFFF}
-	7%) : {F9FF23}%d+{FFFFFF}
+-- 	1%) Объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+-- 	2%) VIP-объявлений отредактировано: {F9FF23}(%d+){FFFFFF}
+-- 	3%) Создано газет: {F9FF23}(%d+){FFFFFF}
+-- 	4%) Продано газет: {F9FF23}(%d+){FFFFFF}
+-- 	5%) : {F9FF23}%d+{FFFFFF}
+-- 	6%) : {F9FF23}%d+{FFFFFF}
+-- 	7%) : {F9FF23}%d+{FFFFFF}
 
-Дата вступления в организацию:
-{cccccc}(.+){FFFFFF}
-Последнее повышение:
-	{cccccc}(.+)]])
-		-- jp_info['org'], jp_info['name'] = 											string.match(text, '{FFFFFF}Статистика успеваемости сотрудника %{66FF6C%}(.+){FFFFFF}: ([A-Za-z_]+)\n')
-		-- jp_info['ads']['all'], jp_info['ads']['all_vip'] = 							string.match(text, 'Объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n')
-		-- jp_info['ads']['today'], jp_info['ads']['today_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
-		-- jp_info['ads']['week'], jp_info['ads']['week_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
+-- Дата вступления в организацию:
+-- {cccccc}(.+){FFFFFF}
+-- Последнее повышение:
+-- 	{cccccc}(.+)]])
+-- 		-- jp_info['org'], jp_info['name'] = 											string.match(text, '{FFFFFF}Статистика успеваемости сотрудника %{66FF6C%}(.+){FFFFFF}: ([A-Za-z_]+)\n')
+-- 		-- jp_info['ads']['all'], jp_info['ads']['all_vip'] = 							string.match(text, 'Объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано: %{FFB323%}(%d+)%{FFFFFF%}\n')
+-- 		-- jp_info['ads']['today'], jp_info['ads']['today_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
+-- 		-- jp_info['ads']['week'], jp_info['ads']['week_vip'] = 						string.match(text, 'Объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'VIP%-объявлений отредактировано за сегодня %{F9FF23%}(%d+)%{FFFFFF%}\n')
 		
 		
 
-		-- jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'] = 		string.match(text, 'Создано газет: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет: %{FFB323%}(%d+)%{FFFFFF%}\n')
-		-- jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'] = 	string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
-		-- jp_info['newspaper']['week_created'], jp_info['newspaper']['week_sell'] = 		string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
-		-- jp_info['rang']['first'], jp_info['rang']['last'] = 							string.match(text, 'Дата вступления в организацию:\n%{cccccc%}(.+)%{FFFFFF%}\nПоследнее повышение:\n%{cccccc%}(.+)')
-		jobprogress[0] = true
-		return false
-	end
+-- 		-- jp_info['newspaper']['all_created'], jp_info['newspaper']['all_sell'] = 		string.match(text, 'Создано газет: %{FFB323%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет: %{FFB323%}(%d+)%{FFFFFF%}\n')
+-- 		-- jp_info['newspaper']['today_created'], jp_info['newspaper']['today_sell'] = 	string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
+-- 		-- jp_info['newspaper']['week_created'], jp_info['newspaper']['week_sell'] = 		string.match(text, 'Создано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n'), string.match(text, 'Продано газет за сегодня: %{F9FF23%}(%d+)%{FFFFFF%}\n')
+-- 		-- jp_info['rang']['first'], jp_info['rang']['last'] = 							string.match(text, 'Дата вступления в организацию:\n%{cccccc%}(.+)%{FFFFFF%}\nПоследнее повышение:\n%{cccccc%}(.+)')
+-- 		jobprogress[0] = true
+-- 		return false
+-- 	end
 end
 
 
@@ -3956,16 +3956,16 @@ function onWindowMessage(msg, wparam, lparam)
 			consumeWindowMessage(true, false)
 			cancel_ad()
 		end
-		if (wparam == keys.VK_ESCAPE and jobprogress[0]) and not isPauseMenuActive() then
-			consumeWindowMessage(true, false)
-			jobprogress[0] = false
-			sampSendDialogResponse(0, 1, 1, "")
-		end
-		if (wparam == keys.VK_ESCAPE and custom_lmenu[0]) and not isPauseMenuActive() then
-			consumeWindowMessage(true, false)
-			custom_lmenu[0] = false
-			sampSendDialogResponse(1214, 0, 0, "")
-		end
+		-- if (wparam == keys.VK_ESCAPE and jobprogress[0]) and not isPauseMenuActive() then
+		-- 	consumeWindowMessage(true, false)
+		-- 	jobprogress[0] = false
+		-- 	sampSendDialogResponse(0, 1, 1, "")
+		-- end
+		-- if (wparam == keys.VK_ESCAPE and custom_lmenu[0]) and not isPauseMenuActive() then
+		-- 	consumeWindowMessage(true, false)
+		-- 	custom_lmenu[0] = false
+		-- 	sampSendDialogResponse(1214, 0, 0, "")
+		-- end
 		if (wparam == keys.VK_ESCAPE and renderWindow[0]) and not isPauseMenuActive() then
 			consumeWindowMessage(true, false)
 			selected_user = nil
