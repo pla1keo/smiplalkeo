@@ -1,4 +1,4 @@
-script_version('3.9.4')
+script_version('3.9.5')
 script_author('plalkeo')
 
 if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
@@ -1357,9 +1357,9 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 				return false
 			end
 			if sobes_i[2] and title == "{BFBBBA}Мед. карта" and string.find(text, sampGetPlayerNickname(selected_user)) then
-				narko = string.match(text, 'Наркозависимость: (%d+)')
+				narko = string.match(text, 'Зависимость от укропа: (%d+)')
 				if tonumber(narko) > 19 then
-					sobes_info['mc'] = u8'Наркозависимость больше 19'
+					sobes_info['mc'] = u8'Зависимость от укропа больше 19'
 					lua_thread.create(function ()
 						sampSendChat("/me взял мед. карту у человека напротив")
 						wait(2000)
@@ -1367,7 +1367,7 @@ function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
 						wait(2000)
 						sampSendChat("/todo К сожалению, вы нам не подходите.*с разочарованием на лице")
 						wait(2000)
-						sampSendChat("У вас в мед. карте написано что вы имеете наркозависимость.")
+						sampSendChat("У вас в мед. карте написано что вы имеете зависимость от укропа.")
 						wait(2000)
 						sampSendChat("/b Вылечитесь у нарколога в больнице.")
 						sobes_i = {
